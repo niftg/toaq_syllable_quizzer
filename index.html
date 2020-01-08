@@ -1,0 +1,167 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Vietoaq quizzer (tinkered)</title>
+    <style>
+        html { background-color: #25253a; color: #fdfdd4; }
+        html, input { font-family: serif !important; font-size: 150%; text-align: center; }
+        input { border: 0; background-color: #bbb; }
+        table { margin-left: auto; margin-right: auto; font-weight: bold; font-size: 24px; border-spacing: 0; }
+        td { padding: 2px 6px; margin: 0; background-color:#4c4c8d; font-family: monospace; }
+        td+td { background-color: #41416b }
+        #prompt { font-size: 350%; }
+        #correct { color: #38b638; }
+        #wrong { color: #ce1f70; }
+        #hint { color: #0c8d8d; }
+        tbody { display: flex; flex-direction: row; }
+        tr { display: flex; flex-direction: column; }
+        #mode { background-color: firebrick }
+        #mode, #mode select { font-family: monospace; font-size: 75%;}
+    </style>
+    <script>
+window.phnTyp = ['elr', 'mid', 'new'][0]
+window.tonTyp = ['elr','new'][1]
+
+const grave = '\u0300'
+const acute = '\u0301'
+const circumflex = '\u0302'
+const tilde = '\u0303'
+const macron = '\u0304'
+const hook = '\u0309'
+const caron = '\u030c'
+const diaeresis = '\u0308'
+const inventories = {
+    hlists: ['m n p b t d k g c ch j f s sh h r l'.split(' '),
+        'm p b f n t d c z s r l ch j sh k g h'.split(' ')],
+    elists: [`a u i o e aq ai ao uq ua ui uo ue iq ia io ie oq oa oi oe eq ea eu ei eo uaq uai uao uoq ueq iaq iai iao ioq ieq oaq eaq eoq aq uq iq eq oq`.split(' '),
+`
+a aq ai ao 
+u uq ua uaq ui     uo uoi uoq ue ueq uai uao 
+i iq ia iaq iu iuq io ioi ioq ie ieq iai iao 
+o oq oa oaq oi oai oao oe oeq 
+e eq ea eaq ei eai eao eo eoq
+`.trim().split(/\s+/),
+`a aq        aı ao                    ay 
+u uq ua uaq uı uo uoq ue ueq uaı uao uy uyq
+ı ıq ıa ıaq ıu ıo ıoq ıe ıeq ıaı ıao ıy ıyq
+o oq oa oaq oı        oe oeq oaı     oy oyq ou
+e eq ea eaq eı        eo eoq eaı     ey eyq
+y yq ya yaq yı yo            yaı
+`.trim().replace(/ı/g,'i').split(/\s+/)],
+    tones: [0, macron, acute, [caron, diaeresis], hook, circumflex, grave, tilde, ''],
+    get: function(phnTyp,tonTyp){
+        const heis = {
+            elr: [0,0],
+            mid: [0,1],
+            new: [1,2]
+        }
+        let ret = {}
+        ret.heads = this.hlists[heis[phnTyp][0]]
+        ret.ends = this.elists[heis[phnTyp][1]]
+        ret.tones = this.tones.map(v=>typeof v== 'object'?v[['elr','new'].indexOf(tonTyp)]:v)
+        return ret
+    }
+}
+let inventory, heads, ends, tones
+function invUpd(p,t){
+    inventory = inventories.get(phnTyp, tonTyp)
+    heads = inventory.heads
+    ends = inventory.ends
+    tones = inventory.tones
+}
+invUpd()
+
+function randi(n) { return Math.floor(Math.random() * n) }
+function pick(arr) { return arr[randi(arr.length)] }
+function randSyl() { return pick(heads) + pick(ends) }
+function randTone() { return randi(7) + 1 } // exclude neutral tone
+function dia(tone) { return tones[tone] }
+function fixi(syl) { return syl.replace(/i/g, 'ı') }
+function sylDia(syl, tone) { return fixi(syl).replace(/[auıoey]/, v => v + dia(tone)) }
+function sylVie(syl, tone) { return syl.replace(/q?$/, q => '--rlpbxznmtdkgfv q'[2*tone+!!q]).trim() }
+
+window.onload = () => {
+    const prompt = document.getElementById('prompt')
+    const help = document.getElementById('help')
+    const input = document.querySelector('input[placeholder="vietoaq"]')
+    let answer
+
+    function newPrompt() {
+        const syl = randSyl()
+        const tone = randTone()
+        prompt.innerText = sylDia(syl, tone)
+        answer = sylVie(syl, tone)
+        input.value = ''
+    }
+
+    function submit() {
+        const ok = input.value === answer
+        document.getElementById(ok ? 'correct' : 'wrong').innerText -= -1
+        document.getElementById('hint').innerHTML = ok ? '&nbsp;' : ` (was <code>${answer}</code>)`
+        newPrompt()
+    }
+
+    function table() {
+        const tbl = document.createElement('table')
+        const tr = tbl.insertRow()
+        const cell = x => tr.insertCell().appendChild(document.createTextNode(x))
+        cell('o'); cell('\xa0'); cell('q')
+
+        for (let i = 1; i <= 7; i++) {
+            const tr = tbl.insertRow()
+            const cell = x => tr.insertCell().appendChild(document.createTextNode(x))
+            cell(`o${dia(i)}`)
+            cell(sylVie('', i))
+            cell(sylVie('q', i))
+        }
+        return tbl
+    }
+
+    input.addEventListener('keydown', e => {
+        if (e.keyCode === 13) { e.preventDefault(); submit() }
+    })
+
+    document.querySelector('label input[name="show"]').addEventListener('change', e => {
+        e.target.checked ? help.appendChild(table()) : help.removeChild(help.firstChild)
+    });
+
+    ['phnTyp', 'tonTyp'].forEach(v=>{
+
+document.querySelector(`select[name="${v}"]`).addEventListener('change', e=>{
+  window[v]=e.target.value
+  invUpd()
+  })
+})
+
+    newPrompt()
+}
+
+</script>
+</head>
+<body>
+    <div id="mode"><label>phonology:<select name="phnTyp">
+    <option value="new">new</option>
+    <option value="mid">middle</option>
+    <option value="elr" selected>earlier</option>
+    </select></label> <label>tone:<select name="tonTyp">
+    <option value="new" selected>new</option>
+    <option value="elr">earlier</option>
+    </select></label></div>
+    <h2 id="prompt"></h2>
+    <input autofocus type="text" placeholder="vietoaq">
+    <div>
+        <span id="correct">0</span> correct,
+        <span id="wrong">0</span> wrong
+        <br>
+        <span id="hint">&nbsp;</span>
+    </div>
+    <br>
+    <label>
+        <input type="checkbox" name="show">
+        show table
+    </label>
+    <div id="help"></div>
+</body>
+</html>
