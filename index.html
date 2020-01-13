@@ -189,33 +189,43 @@ document.querySelector(`select[name="${v}"]`).addEventListener('change', e=>{
   if(['phnTyp', 'tonTyp'].includes(v)){invUpd()}
   })
 })
+
+document.querySelector('select[name="phnTyp"]').addEventListener('change', e=>{
+    [
+        'select[name="queTyp"] option[value="hoe"]',
+        'select[name="ansTyp"] option[value="hoe"]',
+        'input[name="font"]'
+    ].forEach(v =>
+        {
+document.querySelector(v).disabled = e.target.value == 'new'
+        }
+    )
+})
+
     document.querySelector('select[name="queTyp"]').addEventListener('change', e=>{
     const qt = e.target.value
-    let pp = document.querySelector('#prompt')
     if(qt=='vie'){
-        pp.style.setProperty('font-family', 'serif')
+        prompt.style.setProperty('font-family', 'serif')
     }else if(qt=='hoe'){
-        //pp.style.setProperty('font-family', 'TS')
         applyTSF()
     }else if(qt=='dia'){
-        pp.style.setProperty('font-family', 'serif')
+        prompt.style.setProperty('font-family', 'serif')
     }
     newQuestion()
 })
     
 document.querySelector('select[name="ansTyp"]').addEventListener('change', e=>{
     const at = e.target.value
-    let ip = document.querySelector('input[autofocus]')
     if(at=='vie'){
-        ip.placeholder = 'vietoaq'
-        ip.style.setProperty('font-family', 'serif', 'important')
+        input.placeholder = 'vietoaq'
+        input.style.setProperty('font-family', 'serif', 'important')
         was.querySelector('code').style.fontFamily = 'monospace'
     }else if(at=='hoe'){
-        ip.placeholder = 'EhoylR'
+        input.placeholder = 'EhoylR'
         applyTSF()
     }else if(at=='dia'){
-        ip.placeholder = 'sa mỉaıtōaı'
-        ip.style.setProperty('font-family', 'serif', 'important')
+        input.placeholder = 'sa mỉaıtōaı'
+        input.style.setProperty('font-family', 'serif', 'important')
         was.querySelector('code').style.fontFamily = 'monospace'
     }
     newAnswer()
@@ -235,6 +245,16 @@ function applyTSF() {
         was.querySelector('code').style.fontFamily = useTSF ? 'TS' : 'monospace'
     }
 }
+function disNew() {
+    document.querySelector('select[name="phnTyp"] option[value="new"]').disabled = [queTyp=='hoe', ansTyp=='hoe', useTSF].some(v=>v)
+}
+[
+    'select[name="queTyp"]',
+    'select[name="ansTyp"]',
+    'input[name="font"]'
+].forEach(v => {
+    document.querySelector(v).addEventListener('change', e=>{disNew()})
+})
 
     newPrompt()
 }
@@ -243,7 +263,7 @@ function applyTSF() {
 </head>
 <body>
     <div id="mode"><label>phonology:<select name="phnTyp">
-    <option value="new">new</option>
+    <option value="new" disabled>new</option>
     <option value="mid">middle</option>
     <option value="elr" selected>earlier</option>
     <option value="bet">beta original</option>
