@@ -3,7 +3,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Vietoaq quizzer (tinkered)</title>
+    <title>Toaq Syllable Quizzer</title>
     <style>
         html { background-color: #25253a; color: #fdfdd4; }
         html, input { font-family: serif !important; font-size: 150%; text-align: center; }
@@ -11,7 +11,7 @@
         table { margin-left: auto; margin-right: auto; font-weight: bold; font-size: 24px; border-spacing: 0; }
         td { padding: 2px 6px; margin: 0; background-color:#4c4c8d; font-family: monospace; }
         td+td { background-color: #41416b }
-        #prompt { font-size: 350%; }
+        #prompt { font-size: 350%; margin: 1em 0em 0em;}
         #correct { color: #38b638; }
         #wrong { color: #ce1f70; }
         #hint { color: #0c8d8d; }
@@ -19,10 +19,18 @@
         tr { display: flex; flex-direction: column; }
         #mode { background-color: darkred; }
         #mode, #mode select { font-family: monospace; font-size: 75%; }
+        #answer { font-size: 100%; margin: 0.5em 0em 2em; font-family: monospace; color: slategray; visibility: hidden;}
+        @font-face {
+            font-family: "TS";
+            src: url("http://toaq.org/font/TS_current.ttf") format("truetype");
+}
     </style>
     <script>
-window.phnTyp = ['elr', 'mid', 'new'][0]
+window.phnTyp = ['bet', 'elr', 'mid', 'new'][0]
 window.tonTyp = ['elr','new'][1]
+window.queTyp = ['dia', 'hoe', 'vie'][0] // ['t2v','t2h'][0]
+window.ansTyp = ['vie', 'hoe', 'dia'][0]
+window.useTSF = true
 
 const grave = '\u0300'
 const acute = '\u0301'
@@ -35,7 +43,7 @@ const diaeresis = '\u0308'
 const inventories = {
     hlists: ['m n p b t d k g c ch j f s sh h r l'.split(' '),
         'm p b f n t d c z s r l ch j sh k g h'.split(' ')],
-    elists: [`a u i o e aq ai ao uq ua ui uo ue iq ia io ie oq oa oi oe eq ea eu ei eo uaq uai uao uoq ueq iaq iai iao ioq ieq oaq eaq eoq aq uq iq eq oq`.split(' '),
+    elists: [`a u i o e aq ai ao uq ua ui uo ue iq ia io ie oq oa oi oe eq ea eu ei eo uaq uai uao uoq ueq iaq iai iao ioq ieq oaq eaq eoq aq uq iq eq oq`.split(' '), //<-some duplicates?
 `
 a aq ai ao 
 u uq ua uaq ui     uo uoi uoq ue ueq uai uao 
@@ -49,10 +57,13 @@ u uq ua uaq uı uo uoq ue ueq uaı uao uy uyq
 o oq oa oaq oı        oe oeq oaı     oy oyq ou
 e eq ea eaq eı        eo eoq eaı     ey eyq
 y yq ya yaq yı yo            yaı
-`.trim().replace(/ı/g,'i').split(/\s+/)],
+`.trim().replace(/ı/g,'i').split(/\s+/),
+`a u i o e aq ai ao uq ua ui uo ue iq ia io ie oq oa oi oe eq ea ei eo uaq uai uao uoq ueq iaq iai iao ioq ieq oaq eaq eoq`.split(' ')],
     tones: [0, macron, acute, [caron, diaeresis], hook, circumflex, grave, tilde, ''],
+    diphthongs: ['ai', 'ao', 'oi', 'ei'],
     get: function(phnTyp,tonTyp){
         const heis = {
+            bet: [0,3],
             elr: [0,0],
             mid: [0,1],
             new: [1,2]
@@ -72,6 +83,7 @@ function invUpd(p,t){
     tones = inventory.tones
 }
 invUpd()
+diphs = inventories.diphthongs
 
 function randi(n) { return Math.floor(Math.random() * n) }
 function pick(arr) { return arr[randi(arr.length)] }
@@ -81,25 +93,68 @@ function dia(tone) { return tones[tone] }
 function fixi(syl) { return syl.replace(/i/g, 'ı') }
 function sylDia(syl, tone) { return fixi(syl).replace(/[auıoey]/, v => v + dia(tone)) }
 function sylVie(syl, tone) { return syl.replace(/q?$/, q => '--rlpbxznmtdkgfv q'[2*tone+!!q]).trim() }
+function sylHoe(syl, tone) { return syl.replace(/^([^aiuoe]+)([auioe]+)(q?)$/, (_, h, v, q) => {
+    const cmap = {ch:'w', sh:'x'}
+    const dmap = {ai:'y', ao:'v', oi:'z', ei:'W'}
+    let pv, sv
+if(diphs.includes(v.substring(v.length-2))){
+        pv = v.substring(0,v.length-2)
+        sv = v.substring(v.length-2).replace(/.+/, m => dmap[m])
+    }else{
+        pv = v[0], sv = v[1] ? v[1].toUpperCase() : ''
+        if(!sv.length&&pv=='a'){pv = ''}
+    }
+    const c = h.replace(/[cs]h/, m => cmap[m])
+    const tq = '--rlpbxznmtdkgfv q'[2*tone+!!q].toUpperCase()
+    return [sv, c, tq, pv].join('')
+}).trim() }
+
+const llist = 'āūīōēȳáúíóéýǎǔǐǒě-äüïöëÿảủỉỏẻỷâûîôêŷàùìòèỳãũĩõẽỹ'.split('')
+const vlist = 'auıoey'.split('')
+const tlist = inventories.tones.reduce((a, c) => a.concat(c), []).filter(v=>v)
+const dialist = tlist.reduce((a, c) => a.concat(vlist.map(v => v+c)), [])
+function latDia(lat) {
+    const dv = lat.replace(/^.h?(.).*/, '$1')
+    const dia = dialist[llist.indexOf(dv)]
+    return lat.replace(dv, dia)
+}
 
 window.onload = () => {
     const prompt = document.getElementById('prompt')
     const help = document.getElementById('help')
     const input = document.querySelector('input[placeholder="vietoaq"]')
-    let answer
+    let was = document.createElement('span')
+    was.innerHTML = ` (was <code></code>)`
+    let syl, tone, answer
 
     function newPrompt() {
-        const syl = randSyl()
-        const tone = randTone()
-        prompt.innerText = sylDia(syl, tone)
-        answer = sylVie(syl, tone)
+        syl = randSyl()
+        tone = randTone()
+        newQuestion()
+        newAnswer()
         input.value = ''
+    }
+    function newQuestion() {
+        prompt.innerText = {
+            dia: sylDia(syl, tone),
+            hoe: sylHoe(syl, tone),
+            vie: sylVie(syl, tone)
+        }[queTyp]
+    }
+    function newAnswer() {
+        answer = {
+            vie: sylVie(syl, tone),
+            hoe: sylHoe(syl, tone),
+            dia: sylDia(syl, tone)
+        }[ansTyp]
+document.getElementById('answer').innerText = `(${answer})`
     }
 
     function submit() {
-        const ok = input.value === answer
+        was.querySelector('code').innerText = answer
+        const ok = input.value === answer || (ansTyp == 'dia' && latDia(fixi(input.value)) === answer)
         document.getElementById(ok ? 'correct' : 'wrong').innerText -= -1
-        document.getElementById('hint').innerHTML = ok ? '&nbsp;' : ` (was <code>${answer}</code>)`
+        document.getElementById('hint').innerHTML = ok ? '&nbsp;' : was.innerHTML
         newPrompt()
     }
 
@@ -127,13 +182,59 @@ window.onload = () => {
         e.target.checked ? help.appendChild(table()) : help.removeChild(help.firstChild)
     });
 
-    ['phnTyp', 'tonTyp'].forEach(v=>{
+    ['phnTyp', 'tonTyp', 'queTyp', 'ansTyp'].forEach(v=>{
 
 document.querySelector(`select[name="${v}"]`).addEventListener('change', e=>{
   window[v]=e.target.value
-  invUpd()
+  if(['phnTyp', 'tonTyp'].includes(v)){invUpd()}
   })
 })
+    document.querySelector('select[name="queTyp"]').addEventListener('change', e=>{
+    const qt = e.target.value
+    let pp = document.querySelector('#prompt')
+    if(qt=='vie'){
+        pp.style.setProperty('font-family', 'serif')
+    }else if(qt=='hoe'){
+        //pp.style.setProperty('font-family', 'TS')
+        applyTSF()
+    }else if(qt=='dia'){
+        pp.style.setProperty('font-family', 'serif')
+    }
+    newQuestion()
+})
+    
+document.querySelector('select[name="ansTyp"]').addEventListener('change', e=>{
+    const at = e.target.value
+    let ip = document.querySelector('input[autofocus]')
+    if(at=='vie'){
+        ip.placeholder = 'vietoaq'
+        ip.style.setProperty('font-family', 'serif', 'important')
+        was.querySelector('code').style.fontFamily = 'monospace'
+    }else if(at=='hoe'){
+        ip.placeholder = 'EhoylR'
+        applyTSF()
+    }else if(at=='dia'){
+        ip.placeholder = 'sa mỉaıtōaı'
+        ip.style.setProperty('font-family', 'serif', 'important')
+        was.querySelector('code').style.fontFamily = 'monospace'
+    }
+    newAnswer()
+})
+
+document.querySelector('label input[name="answer"]').addEventListener('change', e => {
+        document.getElementById('answer').style.visibility = e.target.checked ? 'visible' : 'hidden'
+    })
+document.querySelector('label input[name="font"]').addEventListener('change', e => {
+        useTSF = e.target.checked
+        applyTSF()
+    })
+function applyTSF() {
+    if (queTyp == 'hoe') { prompt.style.fontFamily = useTSF ? 'TS' : 'monospace' }
+    if (ansTyp == 'hoe') {
+        input.style.setProperty('font-family', useTSF ? 'TS' : 'monospace', 'important')
+        was.querySelector('code').style.fontFamily = useTSF ? 'TS' : 'monospace'
+    }
+}
 
     newPrompt()
 }
@@ -145,11 +246,27 @@ document.querySelector(`select[name="${v}"]`).addEventListener('change', e=>{
     <option value="new">new</option>
     <option value="mid">middle</option>
     <option value="elr" selected>earlier</option>
+    <option value="bet">beta original</option>
     </select></label> <label>tone:<select name="tonTyp">
     <option value="new" selected>new</option>
     <option value="elr">earlier</option>
-    </select></label></div>
+    </select></label>
+<label>question:<select name="queTyp">
+    <option value="dia" selected>latin</option>
+    <option value="hoe">hoelai</option>
+    <option value="vie">vietoaq</option>
+    </select></label>
+<label>answer:<select name="ansTyp">
+    <option value="dia">latin</option>
+    <option value="hoe">hoelai</option>
+    <option value="vie" selected>vietoaq</option>
+    </select></label>
+    <div>
+<label><input type="checkbox" name="answer">show answer</label>
+<label><input type="checkbox" name="font" checked>use TSfont</label>
+    </div></div>
     <h2 id="prompt"></h2>
+    <div id="answer"></div>
     <input autofocus type="text" placeholder="vietoaq">
     <div>
         <span id="correct">0</span> correct,
