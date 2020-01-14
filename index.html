@@ -116,7 +116,7 @@ const dialist = tlist.reduce((a, c) => a.concat(vlist.map(v => v+c)), [])
 function latDia(lat) {
     const dv = lat.replace(/^.h?(.).*/, '$1')
     const dia = dialist[llist.indexOf(dv)]
-    return lat.replace(dv, dia)
+    return dia ? lat.replace(dv, dia) : lat // no fixi here
 }
 
 window.onload = () => {
